@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>山口電鉄 〜やまぐち名産の旅〜</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+  :root {
+    --bg-dark: #0a1f12;
+    --bg-mid: #122b1c;
+    --bg-card: #1a3a25;
+    --gold: #f5c842;
+    --gold-dark: #c9952a;
+    --green-light: #4ade80;
+    --green-mid: #16a34a;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --pink: #ec4899;
+    --yellow: #eab308;
+    --gray: #64748b;
+    --white: #f0fdf4;
+    --text-dim: #86efac;
+    --border: rgba(74,222,128,0.2);
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width:100%; min-height:100vh;
+    background: var(--bg-dark);
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--white);
+    overflow-x: hidden;
+  }
+
+  /* ===== TITLE SCREEN ===== */
+  #screen-title {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+    background: radial-gradient(ellipse at 50% 30%, #1a4d2e 0%, #0a1f12 70%);
+  }
+  .title-logo {
+    font-size: clamp(28px, 8vw, 52px);
+    font-weight: 900;
+    color: var(--gold);
+    text-align:center;
+    line-height:1.2;
+    text-shadow: 0 0 40px rgba(245,200,66,0.4), 2px 4px 8px rgba(0,0,0,0.8);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .title-sub {
+    font-size: clamp(12px, 3.5vw, 16px);
+    color: var(--text-dim);
+    text-align:center;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
+  }
+  .title-spots {
+    display: flex; flex-wrap: wrap; justify-content:center; gap:8px;
+    margin-bottom: 40px; max-width: 320px;
+  }
+  .title-spot {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .btn-start {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+    color: #1a1a1a;
+    border: none;
+    padding: 16px 48px;
+    border-radius: 50px;
+    font-size: 20px;
+    font-weight: 900;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(245,200,66,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+    letter-spacing: 2px;
+  }
+  .btn-start:active { transform: scale(0.96); box-shadow: 0 4px 16px rgba(245,200,66,0.3); }
+  .title-deco {
+    font-size: 64px;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+  }
+
+  /* ===== GAME SCREEN ===== */
+  #screen-game { display:none; flex-direction:column; min-height:100vh; }
+
+  /* Header */
+  .game-header {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    position: sticky; top:0; z-index:50;
+  }
+  .header-top {
+    display: flex; align-items:center; justify-content:space-between;
+    margin-bottom: 8px;
+  }
+  .header-title { font-size: 14px; font-weight:700; color: var(--gold); letter-spacing:1px; }
+  .date-badge {
+    background: rgba(245,200,66,0.15);
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--gold);
+    font-weight:700;
+  }
+  .players-row { display: flex; gap: 8px; }
+  .player-hud {
+    flex:1;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 6px 10px;
+    transition: border-color 0.3s;
+  }
+  .player-hud.active { border-color: var(--gold); }
+  .player-hud.p1 .ph-label { color: #fca5a5; }
+  .player-hud.p2 .ph-label { color: #93c5fd; }
+  .ph-label { font-size: 11px; font-weight:700; margin-bottom:1px; }
+  .ph-money { font-size: 15px; font-weight:900; color: var(--gold); }
+  .ph-props { font-size: 10px; color: var(--text-dim); }
+
+  /* Board */
+  .board-section {
+    flex:1;
+    padding: 12px;
+    overflow-y: auto;
+  }
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+  }
+
+  .cell {
+    border-radius: 10px;
+    padding: 8px 6px;
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center;
+    cursor:pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    min-height: 80px;
+    justify-content: center;
+  }
+  .cell:active { transform: scale(0.95); }
+  .cell.c-start   { background:#3b1d7e; border-color:#a855f7; }
+  .cell.c-blue    { background:#1e3a6e; border-color:#3b82f6; }
+  .cell.c-green   { background:#14422a; border-color:#16a34a; }
+  .cell.c-yellow  { background:#5c3f06; border-color:#eab308; }
+  .cell.c-red     { background:#5c1a1a; border-color:#ef4444; }
+  .cell.c-pink    { background:#5c1040; border-color:#ec4899; }
+  .cell.c-gray    { background:#2a3440; border-color:#64748b; }
+  .cell.c-gold    { background:#5c3800; border-color:var(--gold); border-width:3px; }
+  .cell.c-bonus   { background:#0f3d2e; border-color:#10b981; border-width:3px; }
+  .cell.c-devil   { background:#3d0f0f; border-color:#dc2626; border-width:3px; }
+  .cell.c-goal    { background:#3d3000; border-color:var(--gold); border-width:3px; }
+
+  .cell.is-active { box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(245,200,66,0.5); }
+
+  .cell-emoji { font-size: 22px; margin-bottom: 3px; }
+  .cell-name { font-size: 10px; font-weight:700; color: #fff; line-height:1.3; }
+  .cell-price { font-size: 9px; color: rgba(255,255,255,0.65); margin-top:2px; }
+  .cell-owner {
+    position:absolute; top:-5px; left:-5px;
+    width:18px; height:18px;
+    border-radius:50%;
+    font-size:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    z-index:10;
+  }
+  .cell-owner.o-p1 { background:#ef4444; }
+  .cell-owner.o-p2 { background:#3b82f6; }
+
+  .player-token {
+    position:absolute; bottom:-5px; right:-5px;
+    width:20px; height:20px;
+    border-radius:50%;
+    font-size:11px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    z-index:11;
+  }
+  .token-p1 { background:#ef4444; }
+  .token-p2 { background:#3b82f6; }
+
+  /* Controls */
+  .controls-section {
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .dice-row {
+    display:flex; align-items:center; gap:10px; margin-bottom: 10px;
+  }
+  .dice-box {
+    width:48px; height:48px;
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 28px;
+    flex-shrink:0;
+  }
+  .dice-box.rolling { animation: rollAnim 0.5s ease-out; }
+  @keyframes rollAnim {
+    0%   { transform:rotate(0) scale(1); }
+    30%  { transform:rotate(120deg) scale(1.25); }
+    60%  { transform:rotate(240deg) scale(0.85); }
+    100% { transform:rotate(360deg) scale(1); }
+  }
+  .dice-info { flex:1; }
+  .dice-info .di-label { font-size:11px; color:var(--text-dim); }
+  .dice-info .di-total { font-size:20px; font-weight:900; color:var(--gold); }
+
+  .btn-row { display:flex; gap:8px; }
+  .btn-action {
+    flex:1; padding:13px 8px;
+    border-radius:10px; border:none;
+    font-size:14px; font-weight:900;
+    font-family:inherit; cursor:pointer;
+    transition: transform 0.1s, opacity 0.1s;
+    letter-spacing:0.5px;
+  }
+  .btn-action:active { transform:scale(0.96); }
+  .btn-action:disabled { opacity:0.35; cursor:not-allowed; }
+  .btn-roll  { background:var(--gold); color:#1a1a1a; }
+  .btn-buy   { background:var(--green-mid); color:#fff; }
+  .btn-next  { background:#334155; color:#94a3b8; }
+
+  /* Log */
+  .log-section {
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid var(--border);
+    padding: 8px 16px;
+    max-height: 72px;
+    overflow-y: auto;
+  }
+  .log-line { font-size:11px; color:var(--text-dim); line-height:1.7; }
+  .log-line.hl { color:var(--gold); font-weight:700; }
+
+  /* Modal */
+  .modal-wrap {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.75);
+    z-index:200; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal-wrap.show { display:flex; }
+  .modal-box {
+    background: var(--bg-card);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 340px;
+    width:100%;
+    text-align:center;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.8);
+    animation: modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes modalPop {
+    from { transform:scale(0.7); opacity:0; }
+    to   { transform:scale(1); opacity:1; }
+  }
+  .modal-icon { font-size:52px; margin-bottom:12px; }
+  .modal-title { font-size:20px; font-weight:900; color:var(--gold); margin-bottom:10px; }
+  .modal-body { font-size:14px; color:var(--text-dim); line-height:1.7; margin-bottom:20px; white-space:pre-line; }
+  .modal-ok {
+    background:var(--gold); color:#1a1a1a;
+    border:none; padding:13px 36px;
+    border-radius:50px; font-size:16px; font-weight:900;
+    font-family:inherit; cursor:pointer;
+    box-shadow:0 4px 20px rgba(245,200,66,0.4);
+  }
+  .modal-ok:active { transform:scale(0.96); }
+
+  /* Turn banner */
+  .turn-banner {
+    padding: 6px 16px;
+    text-align:center;
+    font-size:13px; font-weight:700;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+  }
+  .turn-banner.t-p1 { color:#fca5a5; }
+  .turn-banner.t-p2 { color:#93c5fd; }
+
+  /* Legend */
+  .legend {
+    display:flex; flex-wrap:wrap; gap:4px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.15);
+  }
+  .leg-item { font-size:9px; color:var(--text-dim); display:flex; align-items:center; gap:3px; }
+  .leg-dot { width:8px; height:8px; border-radius:2px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:10px; }
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div id="screen-title">
+  <div class="title-deco">🏯</div>
+  <div class="title-logo">山口電鉄</div>
+  <div class="title-sub">〜 やまぐち 名産の旅 〜</div>
+  <div class="title-spots">
+    <span class="title-spot">🐡 下関ふく</span>
+    <span class="title-spot">🌉 角島大橋</span>
+    <span class="title-spot">🏯 萩城</span>
+    <span class="title-spot">🌁 錦帯橋</span>
+    <span class="title-spot">♨️ 湯田温泉</span>
+    <span class="title-spot">🦌 秋吉台</span>
+    <span class="title-spot">🌑 秋芳洞</span>
+    <span class="title-spot">⛩️ 瑠璃光寺</span>
+  </div>
+  <button class="btn-start" onclick="startGame()">🎮 ゲームスタート</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="screen-game">
+  <div class="game-header">
+    <div class="header-top">
+      <div class="header-title">🏯 山口電鉄</div>
+      <div class="date-badge" id="date-badge">1年4月</div>
+    </div>
+    <div class="players-row">
+      <div class="player-hud p1" id="hud-p1">
+        <div class="ph-label">🔴 プレイヤー1</div>
+        <div class="ph-money" id="p1-money">1,000万</div>
+        <div class="ph-props" id="p1-props">物件:0件</div>
+      </div>
+      <div class="player-hud p2" id="hud-p2">
+        <div class="ph-label">🔵 プレイヤー2</div>
+        <div class="ph-money" id="p2-money">1,000万</div>
+        <div class="ph-props" id="p2-props">物件:0件</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="turn-banner t-p1" id="turn-banner">🔴 プレイヤー1 のターン</div>
+
+  <div class="legend">
+    <span class="leg-item"><span class="leg-dot" style="background:#a855f7"></span>スタート</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#3b82f6"></span>通常</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#eab308"></span>名所</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#f5c842"></span>高級</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#10b981"></span>ボーナス</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#dc2626"></span>イベント</span>
+  </div>
+
+  <div class="board-section">
+    <div class="board-grid" id="board"></div>
+  </div>
+
+  <div class="log-section" id="log"></div>
+
+  <div class="controls-section">
+    <div class="dice-row">
+      <div class="dice-box" id="d1">🎲</div>
+      <div class="dice-box" id="d2">🎲</div>
+      <div class="dice-info">
+        <div class="di-label" id="dice-label">サイコロを振ってください</div>
+        <div class="di-total" id="dice-total"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-action btn-roll" id="btn-roll" onclick="rollDice()">🎲 サイコロ</button>
+      <button class="btn-action btn-buy" id="btn-buy" onclick="buyProperty()" disabled>🏢 購入</button>
+      <button class="btn-action btn-next" id="btn-next" onclick="endTurn()" disabled>⏭ 次へ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-wrap" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="m-icon">🎉</div>
+    <div class="modal-title" id="m-title">タイトル</div>
+    <div class="modal-body" id="m-body">本文</div>
+    <button class="modal-ok" onclick="closeModal()">OK！</button>
+  </div>
+</div>
+
+<script>
+const STATIONS = [
+  { name:'下関\nスタート', emoji:'🐡', color:'c-start', price:0,   income:0,   type:'start',  item:'ふく料理' },
+  { name:'唐戸市場',       emoji:'🐟', color:'c-blue',  price:200,  income:40,  type:'shop',   item:'ふく刺し' },
+  { name:'壇ノ浦',         emoji:'⚔️', color:'c-red',   price:0,    income:0,   type:'event',  item:'' },
+  { name:'下関駅',         emoji:'🚉', color:'c-gray',  price:150,  income:30,  type:'shop',   item:'瓦そば' },
+  { name:'角島',           emoji:'🌉', color:'c-yellow',price:300,  income:60,  type:'shop',   item:'角島大橋' },
+  { name:'萩',             emoji:'🏯', color:'c-gold',  price:500,  income:100, type:'shop',   item:'夏みかん' },
+  { name:'萩焼窯元',       emoji:'🏺', color:'c-pink',  price:250,  income:50,  type:'shop',   item:'萩焼' },
+  { name:'津和野',         emoji:'🦢', color:'c-blue',  price:200,  income:40,  type:'shop',   item:'源氏巻' },
+  { name:'山口駅',         emoji:'🌸', color:'c-yellow',price:300,  income:60,  type:'shop',   item:'ういろう' },
+  { name:'瑠璃光寺',       emoji:'⛩️', color:'c-green', price:350,  income:70,  type:'shop',   item:'五重塔' },
+  { name:'ボーナス！',     emoji:'💰', color:'c-bonus', price:0,    income:0,   type:'bonus',  item:'' },
+  { name:'湯田温泉',       emoji:'♨️', color:'c-pink',  price:280,  income:55,  type:'shop',   item:'温泉まんじゅう' },
+  { name:'防府天満宮',     emoji:'🙏', color:'c-gold',  price:400,  income:80,  type:'shop',   item:'防府梅' },
+  { name:'光市',           emoji:'🌻', color:'c-green', price:220,  income:44,  type:'shop',   item:'光市' },
+  { name:'岩国城',         emoji:'🏰', color:'c-yellow',price:350,  income:70,  type:'shop',   item:'れんこん' },
+  { name:'錦帯橋',         emoji:'🌁', color:'c-gold',  price:500,  income:100, type:'shop',   item:'錦帯橋アイス' },
+  { name:'悪魔カード',     emoji:'😈', color:'c-devil', price:0,    income:0,   type:'devil',  item:'' },
+  { name:'宇部市',         emoji:'🌱', color:'c-green', price:200,  income:40,  type:'shop',   item:'常盤公園' },
+  { name:'秋吉台',         emoji:'🦌', color:'c-green', price:300,  income:60,  type:'shop',   item:'カルスト' },
+  { name:'秋芳洞',         emoji:'🌑', color:'c-blue',  price:350,  income:70,  type:'shop',   item:'鍾乳洞' },
+  { name:'ゴール！',       emoji:'🎯', color:'c-goal',  price:0,    income:0,   type:'goal',   item:'山口制覇' },
+];
+
+const DICE_ICONS = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+
+const EVENTS = {
+  event: [
+    { icon:'⚔️', title:'壇ノ浦の戦い！', body:'源平の激戦地…歴史の重みに\n通行料 50万円 を支払う！', effect:(gs,p)=>{ gs.players[p].money-=50; } },
+    { icon:'🌊', title:'海峡の嵐！',       body:'関門海峡に嵐が！\n旅費 30万円 が吹き飛んだ！', effect:(gs,p)=>{ gs.players[p].money-=30; } },
+  ],
+  bonus: [
+    { icon:'🍜', title:'瓦そばボーナス！',   body:'山口名物・瓦そばで元気回復！\n100万円 ゲット！', effect:(gs,p)=>{ gs.players[p].money+=100; } },
+    { icon:'🐡', title:'ふく大漁！',          body:'下関でふくが大漁！\n150万円 ボーナス！', effect:(gs,p)=>{ gs.players[p].money+=150; } },
+    { icon:'🍊', title:'夏みかん豊作！',      body:'萩の夏みかんが豊作！\n80万円 ゲット！', effect:(gs,p)=>{ gs.players[p].money+=80; } },
+    { icon:'🏆', title:'観光客殺到！',         body:'山口県に観光客が殺到！\n所持物件から追加収入 120万円！', effect:(gs,p)=>{ gs.players[p].money+=120; } },
+  ],
+  devil: [
+    { icon:'😈', title:'悪魔カード登場！',   body:'悪魔が現れた！\n所持金の 30% を没収…', effect:(gs,p)=>{ gs.players[p].money=Math.floor(gs.players[p].money*0.7); } },
+    { icon:'👹', title:'大鬼が出た！',        body:'鬼が暴れている！\n200万円 を奪われた！', effect:(gs,p)=>{ gs.players[p].money=Math.max(0,gs.players[p].money-200); } },
+  ],
+};
+
+let gs = {
+  players: [
+    { money:1000, pos:0, owns:[] },
+    { money:1000, pos:0, owns:[] },
+  ],
+  turn:0, year:1, month:4,
+  rolled:false, totalTurns:0, maxTurns:36,
+};
+
+function startGame() {
+  document.getElementById('screen-title').style.display = 'none';
+  document.getElementById('screen-game').style.display = 'flex';
+  buildBoard();
+  updateAll();
+}
+
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  STATIONS.forEach((s,i) => {
+    const cell = document.createElement('div');
+    cell.className = `cell ${s.color}`;
+    cell.id = `c${i}`;
+    cell.innerHTML = `
+      <div class="cell-emoji">${s.emoji}</div>
+      <div class="cell-name">${s.name.replace('\n','<br>')}</div>
+      ${s.price>0 ? `<div class="cell-price">${s.price}万</div>` : ''}
+    `;
+    board.appendChild(cell);
+  });
+}
+
+function updateAll() {
+  // money & props
+  gs.players.forEach((p,i) => {
+    document.getElementById(`p${i+1}-money`).textContent = p.money.toLocaleString()+'万';
+    document.getElementById(`p${i+1}-props`).textContent = `物件:${p.owns.length}件`;
+  });
+  document.getElementById('date-badge').textContent = `${gs.year}年${gs.month}月`;
+
+  // active hud
+  document.getElementById('hud-p1').classList.toggle('active', gs.turn===0);
+  document.getElementById('hud-p2').classList.toggle('active', gs.turn===1);
+
+  // turn banner
+  const tb = document.getElementById('turn-banner');
+  if(gs.turn===0){ tb.textContent='🔴 プレイヤー1 のターン'; tb.className='turn-banner t-p1'; }
+  else            { tb.textContent='🔵 プレイヤー2 のターン'; tb.className='turn-banner t-p2'; }
+
+  // cell markers
+  document.querySelectorAll('.cell-owner, .player-token').forEach(e=>e.remove());
+  document.querySelectorAll('.cell.is-active').forEach(e=>e.classList.remove('is-active'));
+
+  gs.players.forEach((p,pi) => {
+    // owner badges
+    p.owns.forEach(pos => {
+      const cell = document.getElementById(`c${pos}`);
+      if(cell) {
+        const badge = document.createElement('div');
+        badge.className = `cell-owner o-p${pi+1}`;
+        badge.textContent = pi===0?'①':'②';
+        cell.appendChild(badge);
+      }
+    });
+    // player tokens
+    const cell = document.getElementById(`c${p.pos}`);
+    if(cell) {
+      const tok = document.createElement('div');
+      tok.className = `player-token token-p${pi+1}`;
+      tok.textContent = pi===0?'①':'②';
+      cell.appendChild(tok);
+    }
+  });
+
+  // active cell highlight
+  const curCell = document.getElementById(`c${gs.players[gs.turn].pos}`);
+  if(curCell) {
+    curCell.classList.add('is-active');
+    curCell.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+function rollDice() {
+  if(gs.rolled) return;
+  const d1 = Math.ceil(Math.random()*6);
+  const d2 = Math.ceil(Math.random()*6);
+  const total = d1+d2;
+
+  const d1el = document.getElementById('d1');
+  const d2el = document.getElementById('d2');
+  d1el.classList.add('rolling'); d2el.classList.add('rolling');
+  setTimeout(()=>{ d1el.classList.remove('rolling'); d2el.classList.remove('rolling'); },500);
+
+  d1el.textContent = DICE_ICONS[d1-1];
+  d2el.textContent = DICE_ICONS[d2-1];
+  document.getElementById('dice-label').textContent = `合計 → ${total}マス進む`;
+  document.getElementById('dice-total').textContent = '';
+
+  const p = gs.players[gs.turn];
+  p.pos = (p.pos + total) % STATIONS.length;
+  gs.rolled = true;
+
+  document.getElementById('btn-roll').disabled = true;
+  document.getElementById('btn-next').disabled = false;
+
+  updateAll();
+
+  const stn = STATIONS[p.pos];
+  addLog(`P${gs.turn+1} が ${total} 進み「${stn.name.replace('\n','')}」へ`);
+
+  setTimeout(()=>handleLanding(gs.turn), 350);
+}
+
+function handleLanding(pi) {
+  const p = gs.players[pi];
+  const stn = STATIONS[p.pos];
+  const pn = pi===0?'🔴P1':'🔵P2';
+  const other = 1-pi;
+
+  if(stn.type==='start') {
+    p.money+=200;
+    addLog(`${pn} スタート通過！200万円ゲット！`, true);
+    updateAll();
+  } else if(stn.type==='goal') {
+    p.money+=500;
+    addLog(`${pn} ゴール到達！500万円ボーナス！`, true);
+    p.pos=0;
+    updateAll();
+  } else if(stn.type==='event'||stn.type==='bonus'||stn.type==='devil') {
+    const pool = EVENTS[stn.type];
+    const ev = pool[Math.floor(Math.random()*pool.length)];
+    ev.effect(gs, pi);
+    updateAll();
+    showModal(ev.icon, ev.title, ev.body);
+  } else if(stn.type==='shop') {
+    if(gs.players[other].owns.includes(p.pos)) {
+      const toll = stn.income;
+      p.money = Math.max(0, p.money - toll);
+      gs.players[other].money += toll;
+      addLog(`${pn} 通行料 ${toll}万円 を支払い！`, true);
+      updateAll();
+      showModal('💸','通行料！',`「${stn.name.replace('\n','')}」の通行料\n${toll}万円 を支払いました！`);
+    } else if(p.owns.includes(p.pos)) {
+      const rent = Math.floor(stn.income*0.5);
+      p.money += rent;
+      addLog(`${pn} 自物件から${rent}万円収入！`);
+      updateAll();
+    } else {
+      document.getElementById('btn-buy').disabled = false;
+      addLog(`${pn}「${stn.name.replace('\n','')}」到着。購入？ ${stn.price}万円`);
+    }
+  }
+}
+
+function buyProperty() {
+  const p = gs.players[gs.turn];
+  const stn = STATIONS[p.pos];
+  if(p.money >= stn.price) {
+    p.money -= stn.price;
+    p.owns.push(p.pos);
+    addLog(`P${gs.turn+1}「${stn.name.replace('\n','')}」を購入！（${stn.item}）`, true);
+    document.getElementById('btn-buy').disabled = true;
+    updateAll();
+    showModal('🎉','物件購入！',`「${stn.name.replace('\n','')}」を\n${stn.price}万円で購入！\n【${stn.item}】がゲットできた！\n毎ターン${stn.income}万円の収入！`);
+  } else {
+    showModal('😢','お金が足りない…',`購入には ${stn.price}万円 必要ですが\n所持金が足りません！`);
+  }
+}
+
+function endTurn() {
+  if(!gs.rolled) return;
+  document.getElementById('btn-buy').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-roll').disabled = false;
+
+  gs.turn = 1 - gs.turn;
+  gs.rolled = false;
+  gs.totalTurns++;
+  gs.month++;
+  if(gs.month>12){ gs.month=4; gs.year++; }
+
+  // 収入
+  gs.players.forEach((p,pi)=>{
+    let inc=0;
+    p.owns.forEach(pos=>{ inc+=STATIONS[pos].income; });
+    if(inc>0){ p.money+=inc; addLog(`P${pi+1} 物件収入+${inc}万円`); }
+  });
+
+  document.getElementById('d1').textContent='🎲';
+  document.getElementById('d2').textContent='🎲';
+  document.getElementById('dice-label').textContent='サイコロを振ってください';
+  document.getElementById('dice-total').textContent='';
+
+  if(gs.totalTurns >= gs.maxTurns){ endGame(); return; }
+  updateAll();
+}
+
+function endGame() {
+  updateAll();
+  const p1 = gs.players[0].money + gs.players[0].owns.reduce((s,i)=>s+STATIONS[i].price,0);
+  const p2 = gs.players[1].money + gs.players[1].owns.reduce((s,i)=>s+STATIONS[i].price,0);
+  const winner = p1>=p2?1:2;
+  showModal(
+    '🏆','ゲーム終了！',
+    `P1: ${p1.toLocaleString()}万円\nP2: ${p2.toLocaleString()}万円\n\n🎊 プレイヤー${winner} の勝利！\n山口県の名産品を制覇した！\n\nリロードでもう一度遊べます`
+  );
+}
+
+function showModal(icon, title, body) {
+  document.getElementById('m-icon').textContent = icon;
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-body').textContent = body;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+function addLog(msg, hl) {
+  const log = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'log-line' + (hl?' hl':'');
+  d.textContent = msg;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+</script>
+</body>
+</html>
