@@ -461,6 +461,16 @@ let gs = {
 };
 
 function startGame() {
+  // ゲーム状態をリセット
+  gs = {
+    players: [
+      { money:1000, pos:0, owns:[] },
+      { money:1000, pos:0, owns:[] },
+    ],
+    turn:0, year:1, month:4,
+    rolled:false, totalTurns:0, maxTurns:36,
+  };
+  
   document.getElementById('screen-title').style.display = 'none';
   document.getElementById('screen-game').style.display = 'flex';
   buildBoard();
