@@ -126,6 +126,7 @@
     border-radius: 10px;
     padding: 6px 10px;
     transition: border-color 0.3s;
+    cursor: pointer;
   }
   .player-hud.active { border-color: var(--gold); }
   .player-hud.p1 .ph-label { color: #fca5a5; }
@@ -133,6 +134,30 @@
   .ph-label { font-size: 11px; font-weight:700; margin-bottom:1px; }
   .ph-money { font-size: 15px; font-weight:900; color: var(--gold); }
   .ph-props { font-size: 10px; color: var(--text-dim); }
+
+  /* Properties List */
+  .props-modal-box {
+    background: var(--bg-card);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 24px;
+    max-width: 400px;
+    width:100%;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.8);
+    animation: modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .props-modal-title { font-size:18px; font-weight:900; color:var(--gold); margin-bottom:16px; text-align:center; }
+  .props-list { max-height: 400px; overflow-y: auto; }
+  .props-item {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex; justify-content:space-between; align-items:center;
+  }
+  .props-name { font-size:13px; font-weight:700; color:#fff; }
+  .props-income { font-size:11px; color:var(--text-dim); }
 
   /* Board */
   .board-section {
@@ -247,7 +272,8 @@
   .btn-action:disabled { opacity:0.35; cursor:not-allowed; }
   .btn-roll  { background:var(--gold); color:#1a1a1a; }
   .btn-buy   { background:var(--green-mid); color:#fff; }
-  .btn-next  { background:#334155; color:#94a3b8; }
+  .btn-next  { background:#334155; color:#94a3b8; transition: background 0.2s, color 0.2s; }
+  .btn-next:not(:disabled) { background:var(--blue); color:#fff; box-shadow: 0 4px 16px rgba(59,130,246,0.4); }
 
   /* Log */
   .log-section {
@@ -350,12 +376,12 @@
       <div class="date-badge" id="date-badge">1年4月</div>
     </div>
     <div class="players-row">
-      <div class="player-hud p1" id="hud-p1">
+      <div class="player-hud p1" id="hud-p1" onclick="showPropsModal(0)">
         <div class="ph-label">🔴 プレイヤー1</div>
         <div class="ph-money" id="p1-money">1,000万</div>
         <div class="ph-props" id="p1-props">物件:0件</div>
       </div>
-      <div class="player-hud p2" id="hud-p2">
+      <div class="player-hud p2" id="hud-p2" onclick="showPropsModal(1)">
         <div class="ph-label">🔵 プレイヤー2</div>
         <div class="ph-money" id="p2-money">1,000万</div>
         <div class="ph-props" id="p2-props">物件:0件</div>
@@ -407,6 +433,17 @@
   </div>
 </div>
 
+<!-- PROPERTIES MODAL -->
+<div class="modal-wrap" id="propsModal" onclick="closePropsModal(event)">
+  <div class="props-modal-box" onclick="event.stopPropagation()">
+    <div class="props-modal-title" id="propsTitle">保有物件</div>
+    <div class="props-list" id="propsList">
+      <div style="text-align:center; color:var(--text-dim); padding:20px;">物件はまだありません</div>
+    </div>
+    <button class="modal-ok" onclick="closePropsModal()" style="width:100%; margin-top:16px;">閉じる</button>
+  </div>
+</div>
+
 <script>
 const STATIONS = [
   { name:'下関\nスタート', emoji:'🐡', color:'c-start', price:0,   income:0,   type:'start',  item:'ふく料理' },
@@ -424,10 +461,12 @@ const STATIONS = [
   { name:'防府天満宮',     emoji:'🙏', color:'c-gold',  price:400,  income:80,  type:'shop',   item:'防府梅' },
   { name:'光市',           emoji:'🌻', color:'c-green', price:220,  income:44,  type:'shop',   item:'光市' },
   { name:'岩国城',         emoji:'🏰', color:'c-yellow',price:350,  income:70,  type:'shop',   item:'れんこん' },
+  { name:'いろり山賊',     emoji:'🍖', color:'c-yellow',price:280,  income:55,  type:'shop',   item:'いのしし鍋' },
   { name:'錦帯橋',         emoji:'🌁', color:'c-gold',  price:500,  income:100, type:'shop',   item:'錦帯橋アイス' },
   { name:'悪魔カード',     emoji:'😈', color:'c-devil', price:0,    income:0,   type:'devil',  item:'' },
   { name:'宇部市',         emoji:'🌱', color:'c-green', price:200,  income:40,  type:'shop',   item:'常盤公園' },
   { name:'秋吉台',         emoji:'🦌', color:'c-green', price:300,  income:60,  type:'shop',   item:'カルスト' },
+  { name:'元乃隅神社',     emoji:'⛩️', color:'c-gold',  price:320,  income:64,  type:'shop',   item:'参拝' },
   { name:'秋芳洞',         emoji:'🌑', color:'c-blue',  price:350,  income:70,  type:'shop',   item:'鍾乳洞' },
   { name:'ゴール！',       emoji:'🎯', color:'c-goal',  price:0,    income:0,   type:'goal',   item:'山口制覇' },
 ];
@@ -473,6 +512,7 @@ function startGame() {
   
   document.getElementById('screen-title').style.display = 'none';
   document.getElementById('screen-game').style.display = 'flex';
+  document.getElementById('log').innerHTML = ''; // ログをクリア
   buildBoard();
   updateAll();
 }
@@ -583,17 +623,20 @@ function handleLanding(pi) {
   if(stn.type==='start') {
     p.money+=200;
     addLog(`${pn} スタート通過！200万円ゲット！`, true);
+    document.getElementById('btn-next').disabled = false;
     updateAll();
   } else if(stn.type==='goal') {
     p.money+=500;
     addLog(`${pn} ゴール到達！500万円ボーナス！`, true);
     p.pos=0;
+    document.getElementById('btn-next').disabled = false;
     updateAll();
   } else if(stn.type==='event'||stn.type==='bonus'||stn.type==='devil') {
     const pool = EVENTS[stn.type];
     const ev = pool[Math.floor(Math.random()*pool.length)];
     ev.effect(gs, pi);
     updateAll();
+    document.getElementById('btn-next').disabled = false;
     showModal(ev.icon, ev.title, ev.body);
   } else if(stn.type==='shop') {
     if(gs.players[other].owns.includes(p.pos)) {
@@ -602,15 +645,19 @@ function handleLanding(pi) {
       gs.players[other].money += toll;
       addLog(`${pn} 通行料 ${toll}万円 を支払い！`, true);
       updateAll();
+      document.getElementById('btn-next').disabled = false;
       showModal('💸','通行料！',`「${stn.name.replace('\n','')}」の通行料\n${toll}万円 を支払いました！`);
     } else if(p.owns.includes(p.pos)) {
       const rent = Math.floor(stn.income*0.5);
       p.money += rent;
       addLog(`${pn} 自物件から${rent}万円収入！`);
+      document.getElementById('btn-next').disabled = false;
       updateAll();
     } else {
       document.getElementById('btn-buy').disabled = false;
+      document.getElementById('btn-next').disabled = false;
       addLog(`${pn}「${stn.name.replace('\n','')}」到着。購入？ ${stn.price}万円`);
+      updateAll();
     }
   }
 }
@@ -623,6 +670,7 @@ function buyProperty() {
     p.owns.push(p.pos);
     addLog(`P${gs.turn+1}「${stn.name.replace('\n','')}」を購入！（${stn.item}）`, true);
     document.getElementById('btn-buy').disabled = true;
+    document.getElementById('btn-next').disabled = false;
     updateAll();
     showModal('🎉','物件購入！',`「${stn.name.replace('\n','')}」を\n${stn.price}万円で購入！\n【${stn.item}】がゲットできた！\n毎ターン${stn.income}万円の収入！`);
   } else {
@@ -686,6 +734,40 @@ function addLog(msg, hl) {
   d.textContent = msg;
   log.appendChild(d);
   log.scrollTop = log.scrollHeight;
+}
+
+function showPropsModal(pi) {
+  const p = gs.players[pi];
+  const pn = pi===0?'🔴 プレイヤー1':'🔵 プレイヤー2';
+  document.getElementById('propsTitle').textContent = `${pn}の保有物件`;
+  
+  const propsList = document.getElementById('propsList');
+  propsList.innerHTML = '';
+  
+  if(p.owns.length === 0) {
+    propsList.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">物件はまだありません</div>';
+  } else {
+    p.owns.forEach(pos => {
+      const stn = STATIONS[pos];
+      const item = document.createElement('div');
+      item.className = 'props-item';
+      item.innerHTML = `
+        <div>
+          <div class="props-name">${stn.emoji} ${stn.name.replace('\n','')}</div>
+          <div class="props-income">毎ターン ${stn.income}万円</div>
+        </div>
+        <div style="font-size:13px; font-weight:700; color:var(--gold);">💰 ${stn.price}万</div>
+      `;
+      propsList.appendChild(item);
+    });
+  }
+  
+  document.getElementById('propsModal').classList.add('show');
+}
+
+function closePropsModal(event) {
+  if(event && event.target.id !== 'propsModal') return;
+  document.getElementById('propsModal').classList.remove('show');
 }
 </script>
 </body>
